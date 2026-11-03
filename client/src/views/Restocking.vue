@@ -51,7 +51,7 @@
           <button
             type="button"
             class="btn-primary"
-            :disabled="items.length === 0 || submitting || loading"
+            :disabled="items.length === 0 || submitting || loading || stale"
             @click="showConfirm = true"
           >
             {{ submitting ? t('restocking.submitting') : t('restocking.placeOrder') }}
@@ -165,6 +165,9 @@ const error = ref(null)
 const showConfirm = ref(false)
 const submitting = ref(false)
 const submitError = ref(null)
+// True from a slider change until the debounced reload starts: the list on screen no
+// longer matches the budget shown, so ordering must be blocked during that window.
+const stale = ref(false)
 
 const items = computed(() => recommendation.value?.items ?? [])
 
@@ -181,6 +184,7 @@ let requestId = 0
 
 const loadRecommendations = async () => {
   const id = ++requestId
+  stale.value = false
   loading.value = true
   error.value = null
   try {
@@ -199,6 +203,7 @@ const loadRecommendations = async () => {
 // Debounce so dragging the slider doesn't fire a request for every step.
 let debounceTimer = null
 watch(budget, () => {
+  stale.value = true
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(loadRecommendations, DEBOUNCE_MS)
 })
@@ -208,7 +213,7 @@ const closeConfirm = () => {
 }
 
 const placeOrder = async () => {
-  if (!recommendation.value || items.value.length === 0 || submitting.value) return
+  if (!recommendation.value || items.value.length === 0 || submitting.value || stale.value) return
   submitting.value = true
   submitError.value = null
   try {

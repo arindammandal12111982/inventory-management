@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import math
+import threading
 from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
@@ -365,6 +367,14 @@ TREND_PRIORITY = {"increasing": 0, "stable": 1, "decreasing": 2}
 # Submitted restocking orders live only in memory (reset on server restart),
 # kept separate from `orders` so they don't affect customer-order stats.
 restocking_orders: list = []
+# Endpoints are sync, so FastAPI runs them in a thread pool; this lock keeps the
+# id/order-number assignment and the append atomic so two requests can't get the same number.
+restocking_lock = threading.Lock()
+
+def require_valid_budget(budget: float) -> None:
+    """Reject nan/inf as well as negatives: `nan < 0` is False, so a plain sign check lets nan through."""
+    if not math.isfinite(budget) or budget < 0:
+        raise HTTPException(status_code=400, detail="budget must be a non-negative finite number")
 
 def lead_time_for(trend: str) -> int:
     return LEAD_TIME_DAYS_BY_TREND.get(trend, DEFAULT_LEAD_TIME_DAYS)
@@ -373,9 +383,11 @@ def restocking_candidates() -> list:
     """Forecast items that need stock: forecasted demand exceeds quantity on hand."""
     candidates = []
     for f in demand_forecasts:
-        shortfall = f["forecasted_demand"] - f.get("quantity_on_hand", 0)
+        # quantity_on_hand is Optional in the data; treat missing/null as zero stock
+        on_hand = f.get("quantity_on_hand") or 0
+        shortfall = f["forecasted_demand"] - on_hand
         if shortfall > 0 and f.get("unit_cost"):
-            candidates.append({**f, "shortfall": shortfall})
+            candidates.append({**f, "quantity_on_hand": on_hand, "shortfall": shortfall})
     # Trend first (growing demand is most urgent), then largest shortfall
     candidates.sort(key=lambda c: (TREND_PRIORITY.get(c["trend"], 3), -c["shortfall"]))
     return candidates
@@ -383,8 +395,7 @@ def restocking_candidates() -> list:
 @app.get("/api/restocking/recommendations", response_model=RestockingRecommendation)
 def get_restocking_recommendations(budget: float = 0):
     """Recommend forecast items to restock within the given budget"""
-    if budget < 0:
-        raise HTTPException(status_code=400, detail="budget must be non-negative")
+    require_valid_budget(budget)
 
     remaining = budget
     lines = []
@@ -424,14 +435,28 @@ def create_restocking_order(request: CreateRestockingOrderRequest):
     if not request.items:
         raise HTTPException(status_code=400, detail="Order must contain at least one item")
 
+    require_valid_budget(request.budget)
+
+    # Only items that still have a shortfall can be ordered, and never more than that shortfall
+    candidates_by_sku = {c["item_sku"]: c for c in restocking_candidates()}
     forecasts_by_sku = {f["item_sku"]: f for f in demand_forecasts}
+    seen_skus = set()
     items = []
     for line in request.items:
         forecast = forecasts_by_sku.get(line.item_sku)
         if not forecast or not forecast.get("unit_cost"):
             raise HTTPException(status_code=404, detail=f"Unknown SKU: {line.item_sku}")
+        if line.item_sku in seen_skus:
+            raise HTTPException(status_code=400, detail=f"Duplicate SKU: {line.item_sku}")
+        seen_skus.add(line.item_sku)
         if line.quantity <= 0:
             raise HTTPException(status_code=400, detail=f"Invalid quantity for {line.item_sku}")
+        shortfall = candidates_by_sku[line.item_sku]["shortfall"] if line.item_sku in candidates_by_sku else 0
+        if line.quantity > shortfall:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantity for {line.item_sku} exceeds shortfall of {shortfall}",
+            )
         items.append({
             "item_sku": line.item_sku,
             "item_name": forecast["item_name"],
@@ -448,19 +473,22 @@ def create_restocking_order(request: CreateRestockingOrderRequest):
     # The whole order ships together, so it arrives when its slowest item does
     lead_time_days = max(i["lead_time_days"] for i in items)
     now = datetime.now()
-    order_number = f"RST-{now.year}-{len(restocking_orders) + 1:04d}"
-    order = {
-        "id": str(len(restocking_orders) + 1),
-        "order_number": order_number,
-        "status": "Submitted",
-        "submitted_at": now.isoformat(timespec="seconds"),
-        "budget": request.budget,
-        "total_cost": total_cost,
-        "lead_time_days": lead_time_days,
-        "expected_delivery": (now + timedelta(days=lead_time_days)).isoformat(timespec="seconds"),
-        "items": items,
-    }
-    restocking_orders.append(order)
+    with restocking_lock:
+        # The number sequence restarts each year so RST-<year>-NNNN matches its own year
+        prefix = f"RST-{now.year}-"
+        year_count = sum(1 for o in restocking_orders if o["order_number"].startswith(prefix))
+        order = {
+            "id": str(len(restocking_orders) + 1),
+            "order_number": f"{prefix}{year_count + 1:04d}",
+            "status": "Submitted",
+            "submitted_at": now.isoformat(timespec="seconds"),
+            "budget": request.budget,
+            "total_cost": total_cost,
+            "lead_time_days": lead_time_days,
+            "expected_delivery": (now + timedelta(days=lead_time_days)).isoformat(timespec="seconds"),
+            "items": items,
+        }
+        restocking_orders.append(order)
     return order
 
 @app.get("/api/restocking/orders", response_model=List[RestockingOrder])
