@@ -731,7 +731,6 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
 .header-meta {
@@ -759,10 +758,11 @@ export default {
 }
 
 .kpi-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
 }
 
 .kpi-header {
@@ -810,11 +810,27 @@ export default {
   background: #10b981;
 }
 
+/* The page width depends on the sidebar (expanded, rail or drawer), so size the chart
+   grid from the dashboard's own width rather than the viewport. */
+.dashboard {
+  container-type: inline-size;
+}
+
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* One column by default. minmax(0, 1fr) lets cards shrink instead of overflowing.
+     Not auto-fit: the full-width shortages card below also occupies the grid, which
+     stops empty tracks collapsing and leaves the two charts too narrow. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   margin-bottom: 1.5rem;
+}
+
+/* Two side-by-side charts need roughly 520px each */
+@container (min-width: 1060px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .chart-card.full-width {
@@ -860,7 +876,9 @@ export default {
 /* Order Health Dashboard Styles */
 .order-health-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Chart and metrics sit side by side only when each gets 220px; otherwise they
+     stack. A fixed 1fr 1fr overflowed the card on phones. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 1.5rem;
   align-items: center;
   padding: 1rem;

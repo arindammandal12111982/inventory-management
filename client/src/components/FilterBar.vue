@@ -102,28 +102,39 @@ export default {
 
 <style scoped>
 .filters-bar {
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 0.75rem 0;
-  position: sticky;
-  top: 70px;
-  z-index: 90;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) 0;
+}
+
+/* Sits directly under the sticky content header on desktop; scrolls with the page on small screens */
+@media (min-width: 1024px) {
+  .filters-bar {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 30;
+  }
 }
 
 .filters-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--space-6);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .filters-grid {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-3) var(--space-4);
   flex: 1;
+}
+
+@media (max-width: 1023px) {
+  .filters-container {
+    padding: 0 var(--space-4);
+  }
 }
 
 .filter-group {

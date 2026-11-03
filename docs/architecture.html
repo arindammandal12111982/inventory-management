@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — Factory Inventory Management System</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --paper: #f8fafc;
+      --surface: #fff;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --amber: #d97706;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    header, main, footer { width: min(1040px, calc(100% - 48px)); margin-inline: auto; }
+    header { padding: 48px 0 24px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0 0 8px; font-size: 2rem; letter-spacing: -0.02em; }
+    h2 { margin: 0 0 16px; font-size: 1.35rem; }
+    h3 { margin: 0 0 4px; font-size: 1rem; }
+    p { margin: 0 0 12px; }
+    .lede { color: var(--muted); max-width: 70ch; margin: 0; }
+    nav { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 0.9rem; }
+    nav a { color: var(--blue); text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    section { padding: 40px 0 8px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .muted { color: var(--muted); }
+    code { font-family: var(--mono); font-size: 0.85em; background: #eef2f7; padding: 1px 5px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    .diagram { overflow-x: auto; }
+    .diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
+    ol.flow { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+    ol.flow li { position: relative; padding: 0 0 18px 48px; counter-increment: step; }
+    ol.flow li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 0;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--ink); color: #fff;
+      display: grid; place-items: center; font-size: 0.85rem; font-weight: 600;
+    }
+    ol.flow li::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 4px; width: 2px; background: var(--line); }
+    ol.flow li:last-child::after { display: none; }
+    ol.flow strong { display: block; }
+    .note { border-left: 3px solid var(--amber); }
+    .note h3 { color: var(--amber); }
+    ul { margin: 0; padding-left: 20px; }
+    li + li { margin-top: 4px; }
+    footer { padding: 32px 0 56px; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Factory Inventory Management System</h1>
+    <p class="lede">A full-stack demo application: a Vue 3 single-page app talking to a Python FastAPI service that serves in-memory data loaded from JSON files. There is no database.</p>
+    <nav aria-label="Page sections">
+      <a href="#architecture">System architecture</a>
+      <a href="#stack">Tech stack</a>
+      <a href="#dataflow">Data flow</a>
+      <a href="#restocking">Restocking</a>
+      <a href="#api">API</a>
+      <a href="#frontend">Frontend structure</a>
+      <a href="#notes">Observations</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="architecture">
+      <h2>System architecture</h2>
+      <div class="card diagram">
+        <svg viewBox="0 0 960 330" role="img" aria-labelledby="diagram-title diagram-desc" font-family="system-ui, sans-serif">
+          <title id="diagram-title">System architecture diagram</title>
+          <desc id="diagram-desc">A browser loads the Vue app from the Vite dev server on port 3000. The app calls the FastAPI server on port 8001 over HTTP and JSON. FastAPI reads data held in memory, loaded at startup from JSON files.</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+
+          <!-- Frontend group -->
+          <rect x="10" y="20" width="400" height="290" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+          <text x="28" y="46" font-size="13" font-weight="600" fill="#1d4ed8">FRONTEND  ·  localhost:3000</text>
+
+          <rect x="30" y="64" width="360" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="46" y="86" font-size="14" font-weight="600" fill="#0f172a">Vue Router</text>
+          <text x="46" y="104" font-size="12" fill="#64748b">7 routes, including the new Restocking tab</text>
+
+          <rect x="30" y="128" width="360" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="46" y="150" font-size="14" font-weight="600" fill="#0f172a">Views + components</text>
+          <text x="46" y="168" font-size="12" fill="#64748b">Refs hold raw data; computed props derive chart data</text>
+
+          <rect x="30" y="192" width="170" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="46" y="214" font-size="14" font-weight="600" fill="#0f172a">useFilters</text>
+          <text x="46" y="232" font-size="12" fill="#64748b">Shared filter state</text>
+
+          <rect x="220" y="192" width="170" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="236" y="214" font-size="14" font-weight="600" fill="#0f172a">api.js (axios)</text>
+          <text x="236" y="232" font-size="12" fill="#64748b">Builds query params</text>
+
+          <text x="30" y="276" font-size="12" fill="#64748b">Also: useAuth, useI18n (en / ja), modal components</text>
+          <text x="30" y="294" font-size="12" fill="#64748b">Built and served by Vite 8</text>
+
+          <!-- Backend group -->
+          <rect x="500" y="20" width="230" height="290" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+          <text x="518" y="46" font-size="13" font-weight="600" fill="#15803d">BACKEND  ·  localhost:8001</text>
+
+          <rect x="520" y="64" width="190" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="536" y="86" font-size="14" font-weight="600" fill="#0f172a">CORS middleware</text>
+          <text x="536" y="104" font-size="12" fill="#64748b">Allows all origins</text>
+
+          <rect x="520" y="128" width="190" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="536" y="150" font-size="14" font-weight="600" fill="#0f172a">FastAPI routes</text>
+          <text x="536" y="168" font-size="12" fill="#64748b">/api/* endpoints</text>
+
+          <rect x="520" y="192" width="190" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="536" y="214" font-size="14" font-weight="600" fill="#0f172a">Filter + validate</text>
+          <text x="536" y="232" font-size="12" fill="#64748b">apply_filters, Pydantic</text>
+
+          <text x="520" y="276" font-size="12" fill="#64748b">Uvicorn  ·  docs at /docs</text>
+          <text x="520" y="294" font-size="12" fill="#64748b">Restocking orders held in memory</text>
+
+          <!-- Data group -->
+          <rect x="820" y="20" width="130" height="290" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+          <text x="836" y="46" font-size="13" font-weight="600" fill="#b45309">DATA</text>
+
+          <rect x="834" y="64" width="102" height="116" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="846" y="86" font-size="14" font-weight="600" fill="#0f172a">mock_data.py</text>
+          <text x="846" y="104" font-size="12" fill="#64748b">Loads at</text>
+          <text x="846" y="120" font-size="12" fill="#64748b">startup into</text>
+          <text x="846" y="136" font-size="12" fill="#64748b">Python lists</text>
+
+          <rect x="834" y="192" width="102" height="52" rx="6" fill="#fff" stroke="#cbd5e1"/>
+          <text x="846" y="214" font-size="14" font-weight="600" fill="#0f172a">data/*.json</text>
+          <text x="846" y="232" font-size="12" fill="#64748b">7 files</text>
+
+          <!-- Arrows -->
+          <line x1="410" y1="218" x2="498" y2="218" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="454" y="206" font-size="11" fill="#64748b" text-anchor="middle">HTTP</text>
+          <text x="454" y="236" font-size="11" fill="#64748b" text-anchor="middle">JSON</text>
+
+          <line x1="730" y1="154" x2="832" y2="122" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="781" y="152" font-size="11" fill="#64748b" text-anchor="middle">in-memory</text>
+
+          <line x1="885" y1="192" x2="885" y2="182" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+      <p class="muted" style="margin-top:12px">Two separately run processes. The browser loads the Vue app from Vite, then the app calls the API directly at <code>http://localhost:8001/api</code>. The URL is hard-coded in <code>client/src/api.js</code>, so Vite does not proxy.</p>
+    </section>
+
+    <section id="stack">
+      <h2>Tech stack</h2>
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend framework</td><td>Vue 3 (Composition API)</td><td>Single-page app, <code>vue ^3.4</code></td></tr>
+          <tr><td>Routing</td><td>Vue Router 4</td><td>History mode, 7 routes</td></tr>
+          <tr><td>HTTP client</td><td>Axios</td><td>Wrapped by <code>client/src/api.js</code></td></tr>
+          <tr><td>Build / dev server</td><td>Vite 8</td><td>Port 3000, Node 20.19+ or 22.12+</td></tr>
+          <tr><td>Charts and styling</td><td>Custom SVG, CSS Grid</td><td>No charting library; scoped component styles</td></tr>
+          <tr><td>Backend framework</td><td>FastAPI</td><td>Port 8001, served by Uvicorn</td></tr>
+          <tr><td>Validation</td><td>Pydantic 2</td><td>Response models for inventory, orders, demand, backlog</td></tr>
+          <tr><td>Data store</td><td>JSON files, in memory</td><td>No database; changes, including submitted restocking orders, are lost on restart</td></tr>
+          <tr><td>Python tooling</td><td>uv (project default), pytest</td><td><code>pyproject.toml</code> requires Python 3.11+</td></tr>
+          <tr><td>Tests</td><td>pytest + FastAPI TestClient</td><td>Backend only, in <code>tests/backend</code></td></tr>
+          <tr><td>Developer tooling</td><td>Claude Code config</td><td>Subagents, slash commands, hooks and MCP servers (GitHub, Playwright) in <code>.claude/</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="dataflow">
+      <h2>Data flow</h2>
+      <p class="muted">How a filter change on the Dashboard becomes updated charts.</p>
+      <div class="card">
+        <ol class="flow">
+          <li><strong>User changes a filter</strong>Four shared filters live in <code>useFilters</code>: period, location, category and status. They are module-level refs, so every view sees the same state.</li>
+          <li><strong>View reacts</strong>The Dashboard <code>watch</code>es the four refs and reloads. <code>getCurrentFilters()</code> maps them to <code>warehouse</code>, <code>category</code>, <code>status</code> and <code>month</code>.</li>
+          <li><strong>API client builds the request</strong><code>api.js</code> adds a query parameter only when the value is not <code>all</code>, then calls the endpoint with Axios. The Dashboard fetches summary, orders, inventory and backlog in parallel.</li>
+          <li><strong>FastAPI filters in memory</strong>Route handlers call <code>apply_filters()</code> and <code>filter_by_month()</code> over lists that <code>mock_data.py</code> loaded from <code>server/data/*.json</code> at startup. Months and quarters (for example <code>Q3-2025</code>) are matched against <code>order_date</code>.</li>
+          <li><strong>Response is validated</strong>Endpoints with a <code>response_model</code> are checked by Pydantic and serialised to JSON. The dashboard summary is computed on the fly: inventory value, low-stock count, pending orders and order value.</li>
+          <li><strong>UI re-renders</strong>Responses are stored in refs, and computed properties derive chart series, health metrics and top products. The template re-renders the custom SVG charts.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="restocking">
+      <h2>Restocking flow</h2>
+      <p class="muted">How the Restocking tab turns a budget into a submitted order shown on the Orders tab.</p>
+      <div class="card">
+        <ol class="flow">
+          <li><strong>User moves the budget slider</strong><code>Restocking.vue</code> offers $0 to $500,000 in $5,000 steps. Requests are debounced, and a request id makes the view ignore out-of-order responses.</li>
+          <li><strong>Server recommends items</strong><code>GET /api/restocking/recommendations?budget=</code> takes each demand forecast whose forecasted demand exceeds quantity on hand. It sorts by trend (increasing, stable, decreasing) and then by largest shortfall, and spends the budget in that order. The last affordable item may be a partial quantity, and cheaper items further down can still use leftover budget.</li>
+          <li><strong>Lead time is derived from trend</strong>Increasing is 7 days, stable 10, decreasing 14. An order ships together, so its lead time is that of its slowest item.</li>
+          <li><strong>User places the order</strong>A confirmation shows total cost and lead time. The view then posts only SKUs and quantities to <code>POST /api/restocking/orders</code>.</li>
+          <li><strong>Server prices and stores it</strong>Unit costs come from server data, never from the client. The server rejects unknown SKUs, empty orders, non-positive quantities and totals above the budget, then appends the order to an in-memory list with an <code>RST-</code> order number and expected delivery date.</li>
+          <li><strong>Orders tab lists it</strong>The app navigates to Orders, which loads <code>GET /api/restocking/orders</code> into a "Submitted Orders" card. That list is separate from customer orders, so the shared filters and the stat cards do not affect it.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="api">
+      <h2>API endpoints</h2>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Filters</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /api/inventory</code>, <code>/{id}</code></td><td>warehouse, category</td><td>Stock items</td></tr>
+          <tr><td><code>GET /api/orders</code>, <code>/{id}</code></td><td>warehouse, category, status, month</td><td>Orders</td></tr>
+          <tr><td><code>GET /api/dashboard/summary</code></td><td>warehouse, category, status, month</td><td>Aggregate metrics</td></tr>
+          <tr><td><code>GET /api/demand</code></td><td>none</td><td>Demand forecasts, including <code>quantity_on_hand</code> and <code>unit_cost</code></td></tr>
+          <tr><td><code>GET /api/backlog</code></td><td>none</td><td>Backlog items with <code>has_purchase_order</code> flag</td></tr>
+          <tr><td><code>GET /api/spending/summary | monthly | categories | transactions</code></td><td>none</td><td>Spending data</td></tr>
+          <tr><td><code>GET /api/reports/quarterly | monthly-trends</code></td><td>none</td><td>Report aggregates</td></tr>
+          <tr><td><code>GET /api/restocking/recommendations</code></td><td><code>budget</code></td><td>Items to restock within the budget, total cost, lead time</td></tr>
+          <tr><td><code>POST /api/restocking/orders</code></td><td>none (JSON body)</td><td>Submitted restocking order (201); 400 or 404 on invalid input</td></tr>
+          <tr><td><code>GET /api/restocking/orders</code></td><td>none</td><td>Submitted restocking orders, newest first</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="frontend">
+      <h2>Frontend structure</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>views/</h3>
+          <p class="muted">Page-level components: Dashboard, Inventory, Orders, Demand, Spending, Reports and Restocking. A Backlog view also exists. Orders also shows the Submitted Orders card.</p>
+        </div>
+        <div class="card">
+          <h3>components/</h3>
+          <p class="muted">Filter bar, profile menu, language switcher, and detail modals for inventory, products, backlog, cost, tasks and profile.</p>
+        </div>
+        <div class="card">
+          <h3>composables/</h3>
+          <p class="muted"><code>useFilters</code> (shared filters), <code>useAuth</code>, and <code>useI18n</code> with English and Japanese locales.</p>
+        </div>
+        <div class="card">
+          <h3>api.js</h3>
+          <p class="muted">Single place for HTTP calls. One view, Reports, calls Axios directly instead.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="notes">
+      <h2>Observations</h2>
+      <div class="card note">
+        <h3>Worth knowing before you change things</h3>
+        <ul>
+          <li><strong>Frontend calls endpoints the backend does not have.</strong> <code>api.js</code> defines tasks (<code>/api/tasks</code>) and purchase-order (<code>/api/purchase-orders</code>) calls, but the running API exposes neither. <code>purchase_orders.json</code> is an empty list.</li>
+          <li><strong>Restocking cost and stock data is partly placeholder.</strong> Only PSU-501 matches an inventory record. The other 8 forecast SKUs have invented <code>quantity_on_hand</code> and <code>unit_cost</code> values in <code>demand_forecasts.json</code>. Lead times are a fixed rule on trend, not supplier data.</li>
+          <li><strong>Filter support is uneven.</strong> Inventory ignores status and month; demand and backlog take no filters; <code>total_backlog_items</code> in the summary is never filtered.</li>
+          <li><strong>State is volatile.</strong> All data lives in process memory, so a restart resets it, including submitted restocking orders.</li>
+          <li><strong>CORS is open</strong> (<code>allow_origins=["*"]</code>) and the API URL is hard-coded. Both are fine for a local demo but need changing for deployment.</li>
+          <li><strong>Backlog view is not routed.</strong> <code>Backlog.vue</code> exists but is not registered in the router.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Generated from the repository source. Ports: frontend 3000, backend 8001. Source of truth: <code>client/src/main.js</code>, <code>client/src/api.js</code>, <code>server/main.py</code>, <code>server/mock_data.py</code>.
+  </footer>
+</body>
+</html>
