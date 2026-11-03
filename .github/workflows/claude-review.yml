@@ -1,5 +1,5 @@
 # Posts an automated review on every new or updated pull request.
-# Needs the ANTHROPIC_API_KEY repository secret and the Claude GitHub App installed.
+# Needs the CLAUDE_CODE_OAUTH_TOKEN repository secret and the Claude GitHub App installed.
 # PRs from forks don't receive repository secrets, so this job only runs for same-repo branches.
 name: Claude Code Review
 
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 1
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Review this pull request for correctness bugs, security problems and missing tests.
             Follow the conventions in CLAUDE.md. Be concise and only comment on real problems.
