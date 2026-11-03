@@ -6,6 +6,12 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
+    reports: 'Reports',
+    primary: 'Main navigation',
+    menu: 'Open navigation menu',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Expand sidebar',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -106,6 +112,14 @@ export default {
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
+    submittedOrders: 'Submitted Orders',
+    submittedOrdersCount: 'Submitted Orders ({count})',
+    noSubmittedOrders: 'No restocking orders have been submitted yet.',
+    loadSubmittedFailed: 'Failed to load submitted orders',
+    submittedTable: {
+      submitted: 'Submitted',
+      leadTime: 'Delivery Lead Time'
+    },
     totalOrders: 'Total Orders',
     totalRevenue: 'Total Revenue',
     avgOrderValue: 'Avg Order Value',
@@ -207,6 +221,44 @@ export default {
     inStock: 'In Stock',
     lowStock: 'Low Stock',
     adequate: 'Adequate'
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    description: 'Plan restocking purchases within a budget based on demand forecasts',
+    budget: 'Restocking Budget',
+    budgetSlider: 'Budget slider',
+    totalCost: 'Total Cost',
+    remainingBudget: 'Remaining Budget',
+    leadTime: 'Delivery Lead Time',
+    days: '{count} days',
+    day: '{count} day',
+    recommendations: 'Recommended Items',
+    empty: 'The budget is too low to cover any recommended items. Increase the budget to see recommendations.',
+    loadFailed: 'Failed to load recommendations',
+    partial: 'Partial',
+    partialTitle: 'Covers {covered} of the {shortfall} unit shortfall',
+    placeOrder: 'Place Order',
+    submitting: 'Submitting...',
+    orderFailed: 'Failed to place order',
+    table: {
+      sku: 'SKU',
+      name: 'Item',
+      trend: 'Trend',
+      shortfall: 'Shortfall',
+      quantity: 'Order Qty',
+      unitCost: 'Unit Cost',
+      lineCost: 'Line Cost',
+      leadTime: 'Lead Time'
+    },
+    confirm: {
+      title: 'Confirm Restocking Order',
+      message: 'You are about to submit a restocking order for {count} items.',
+      items: 'Items',
+      total: 'Total Cost',
+      leadTime: 'Delivery Lead Time'
+    }
   },
 
   // Trends

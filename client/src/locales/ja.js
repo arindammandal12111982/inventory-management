@@ -6,6 +6,12 @@ export default {
     orders: '注文',
     finance: '財務',
     demandForecast: '需要予測',
+    restocking: '補充発注',
+    reports: 'レポート',
+    primary: 'メインナビゲーション',
+    menu: 'ナビゲーションメニューを開く',
+    collapseSidebar: 'サイドバーを折りたたむ',
+    expandSidebar: 'サイドバーを展開',
     companyName: '触媒コンポーネンツ',
     subtitle: '在庫管理システム'
   },
@@ -106,6 +112,14 @@ export default {
     title: '注文',
     description: '顧客注文の表示と管理',
     allOrders: 'すべての注文',
+    submittedOrders: '発注済みの注文',
+    submittedOrdersCount: '発注済みの注文 ({count})',
+    noSubmittedOrders: '送信済みの補充発注はまだありません。',
+    loadSubmittedFailed: '発注済みの注文の読み込みに失敗しました',
+    submittedTable: {
+      submitted: '発注日',
+      leadTime: '納品リードタイム'
+    },
     totalOrders: '総注文数',
     totalRevenue: '総収益',
     avgOrderValue: '平均注文額',
@@ -207,6 +221,44 @@ export default {
     inStock: '在庫あり',
     lowStock: '在庫僅少',
     adequate: '適量'
+  },
+
+  // Restocking
+  restocking: {
+    title: '補充発注',
+    description: '需要予測に基づき、予算内で補充購入を計画します',
+    budget: '補充予算',
+    budgetSlider: '予算スライダー',
+    totalCost: '合計コスト',
+    remainingBudget: '残り予算',
+    leadTime: '納品リードタイム',
+    days: '{count}日',
+    day: '{count}日',
+    recommendations: '推奨品目',
+    empty: '予算が少なすぎて推奨品目をカバーできません。予算を増やしてください。',
+    loadFailed: '推奨品目の読み込みに失敗しました',
+    partial: '一部のみ',
+    partialTitle: '不足数 {shortfall} 個のうち {covered} 個をカバー',
+    placeOrder: '発注する',
+    submitting: '送信中...',
+    orderFailed: '発注に失敗しました',
+    table: {
+      sku: 'SKU',
+      name: '品目',
+      trend: 'トレンド',
+      shortfall: '不足数',
+      quantity: '発注数量',
+      unitCost: '単価',
+      lineCost: '明細金額',
+      leadTime: 'リードタイム'
+    },
+    confirm: {
+      title: '補充発注の確認',
+      message: '{count}品目の補充発注を送信します。',
+      items: '品目数',
+      total: '合計コスト',
+      leadTime: '納品リードタイム'
+    }
   },
 
   // Trends
